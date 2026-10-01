@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { after } from "next/server";
 import { prisma } from "@/lib/db";
 import { deliveryTrackingProblem, mailConfigProblem, settleEmails, testMode } from "@/lib/email/send";
 import { EMAIL_TYPE_LABEL, type EmailType } from "@/lib/email/templates";
@@ -28,6 +29,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 // and bounced states.
 export default async function OutboxPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
   await settleEmails().catch((e) => console.error("[email] settle", e));
+  after(() => settleEmails({ poll: true }).then(() => undefined).catch(() => undefined));
   const { f } = await searchParams;
   const counts = Object.fromEntries(
     await Promise.all(FILTERS.map(async (x) => [x.key, await prisma.email.count({ where: { status: { in: [...x.statuses] } } })] as const)),

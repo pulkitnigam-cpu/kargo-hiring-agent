@@ -17,8 +17,7 @@ export default function UndoButton({ emailId, sendAfter }: { emailId: string; se
         onClick={() =>
           start(async () => {
             const r = await undo(emailId);
-            if (!r.ok) alert(r.error);
-            router.refresh();
+            if (!r.ok) alert(r.error); // the server action refreshes the page
           })
         }
       >

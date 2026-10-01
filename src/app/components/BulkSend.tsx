@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { prepare, sendBulk } from "../email-actions";
 
@@ -26,7 +25,6 @@ const TITLE: Record<Group, string> = {
 // he picks who's included, can add one message for everyone, ticks the
 // consent box, and each email still waits out its undo window.
 export default function BulkSend({ group, label, count, undoMinutes, plain }: { group: Group; label: string; count: number; undoMinutes: number; plain?: boolean }) {
-  const router = useRouter();
   const ref = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<"preparing" | "confirm" | "sending" | "done">("preparing");
@@ -74,15 +72,13 @@ export default function BulkSend({ group, label, count, undoMinutes, plain }: { 
     setPhase("sending");
     const r = await sendBulk([...picked], note, true);
     setResult(r);
-    setPhase("done");
-    router.refresh();
+    setPhase("done"); // sendBulk refreshes the dashboard itself
   };
 
   const close = () => {
     if (phase === "preparing" || phase === "sending") return;
     ref.current?.close();
     setOpen(false);
-    router.refresh();
   };
 
   const n = picked.size;

@@ -36,7 +36,7 @@ export async function scoreCandidate(
 ): Promise<void> {
   const candidate = await prisma.candidate.findUniqueOrThrow({
     where: { id: candidateId },
-    include: { cvFiles: { orderBy: { createdAt: "desc" }, take: 1 } },
+    include: { cvFiles: { orderBy: { createdAt: "desc" }, take: 1, select: { rawText: true } } },
   });
   const rawText = candidate.cvFiles[0]?.rawText;
   if (!rawText) {

@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const settled = await settleEmails();
+  const settled = await settleEmails({ poll: true });
   const purged = await purgeExpired();
   return NextResponse.json({ ok: true, settled, purged });
 }

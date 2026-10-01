@@ -207,7 +207,7 @@ export type DetailsInput = { isAugustContact?: boolean; appliedDate?: Date; emai
 // Corrections Arjun can make that the upload couldn't know: the applied date,
 // the August "let's chat" flag, and a missing email address.
 export async function updateDetails(candidateId: string, input: DetailsInput): Promise<{ ok: boolean; error?: string }> {
-  const c = await prisma.candidate.findUnique({ where: { id: candidateId }, include: { cvFiles: { take: 1, orderBy: { createdAt: "desc" } } } });
+  const c = await prisma.candidate.findUnique({ where: { id: candidateId }, include: { cvFiles: { take: 1, orderBy: { createdAt: "desc" }, select: { parseStatus: true } } } });
   if (!c) return { ok: false, error: "Candidate not found." };
 
   const data: Record<string, unknown> = {};

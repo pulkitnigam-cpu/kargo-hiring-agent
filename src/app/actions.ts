@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { ROLES, type Role } from "@/lib/constants";
 import * as decisions from "@/lib/decisions";
+import { ensureDraft } from "@/lib/email/drafts";
 import { parseDate } from "@/lib/ingest/manifest";
 import { startScoring } from "@/lib/scoring/queue";
 import type { Band } from "@/lib/scoring/rubric";
@@ -13,6 +14,7 @@ const BANDS: Band[] = ["SELECTED", "HOLD", "REJECTED"];
 export async function moveCandidate(id: string, to: string, reason: string) {
   if (!BANDS.includes(to as Band)) return { ok: false as const, error: "Unknown band." };
   const res = await decisions.moveCandidate(id, to as Band, reason.slice(0, 280));
+  if (res.ok) after(() => ensureDraft(id).then(() => undefined).catch(() => undefined));
   revalidatePath("/", "layout");
   return res;
 }
@@ -20,6 +22,7 @@ export async function moveCandidate(id: string, to: string, reason: string) {
 export async function changeRole(id: string, to: string, reason: string) {
   if (!(ROLES as readonly string[]).includes(to)) return { ok: false as const, error: "Unknown role." };
   const res = await decisions.changeRole(id, to as Role, reason.slice(0, 280));
+  if (res.ok) after(() => ensureDraft(id).then(() => undefined).catch(() => undefined));
   revalidatePath("/", "layout");
   return res;
 }

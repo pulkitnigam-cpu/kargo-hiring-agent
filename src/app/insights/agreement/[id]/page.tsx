@@ -35,7 +35,7 @@ export default async function AgreementPage({ params }: { params: Promise<{ id: 
 
   const c = await prisma.candidate.findUniqueOrThrow({
     where: { id: next.candidateId },
-    include: { cvFiles: { orderBy: { createdAt: "desc" }, take: 1 } },
+    include: { cvFiles: { orderBy: { createdAt: "desc" }, take: 1, select: { rawText: true } } },
   });
   const role = (c.roleAssigned ?? c.roleTag) as Role | null;
   const decide = callBand.bind(null, run.id, c.id);

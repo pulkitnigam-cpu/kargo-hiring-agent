@@ -117,7 +117,7 @@ export async function queueEmails(emailIds: string[], actor: "arjun" = "arjun"):
         payloadJson: JSON.stringify({ type: e.type, emailId: e.id, sendAfter: sendAt.toISOString(), testMode: testMode(), resendId: r.id }),
       },
     });
-    await sleep(300); // stay under Resend's request rate
+    if (emails.length > 1) await sleep(300); // stay under Resend's request rate in bulk sends
   }
   return { queued, skipped, sendAt: queued ? sendAt : null };
 }
@@ -174,9 +174,10 @@ export async function sendAgain(emailId: string): Promise<QueueResult> {
 // ---- Catching up -------------------------------------------------------------
 
 // Emails whose undo window has passed have gone out (Resend sends them on
-// schedule). Mark them sent and move the candidate on. Cheap; called on
-// dashboard loads, progress polls and the daily cron.
-export async function settleEmails(now = new Date()): Promise<number> {
+// schedule). Mark them sent and move the candidate on. One quick query when
+// nothing is due, so it's safe on every page load. Delivery-status polling
+// (slow: one Resend call per email) only runs when asked, off the click path.
+export async function settleEmails(opts: { poll?: boolean } = {}, now = new Date()): Promise<number> {
   const due = await prisma.email.findMany({ where: { status: "queued", sendAfter: { lte: now } }, include: { candidate: true }, take: 200 });
   for (const e of due) {
     const claimed = await prisma.email.updateMany({ where: { id: e.id, status: "queued" }, data: { status: "sent", sentAt: e.sendAfter, lastEvent: "sent" } });
@@ -201,7 +202,7 @@ export async function settleEmails(now = new Date()): Promise<number> {
       }),
     ]);
   }
-  await pollDelivery().catch((err) => console.error("[email] delivery", err));
+  if (opts.poll) await pollDelivery().catch((err) => console.error("[email] delivery", err));
   return due.length;
 }
 
@@ -252,7 +253,7 @@ export const BULK_LABEL: Record<BulkGroup, string> = {
   hold_due: "Send close-call regrets to holds due",
 };
 
-const GROUP_STATUS: Record<BulkGroup, string> = { invite: S.SELECTED, hold: S.HOLD, regret: S.REJECTED, hold_due: S.HOLD_NOTIFIED };
+export const GROUP_STATUS: Record<BulkGroup, string> = { invite: S.SELECTED, hold: S.HOLD, regret: S.REJECTED, hold_due: S.HOLD_NOTIFIED };
 
 export type Prepared = {
   ready: { candidateId: string; name: string; emailId: string; type: EmailType }[];
@@ -297,7 +298,7 @@ export async function prepareBulk(group: BulkGroup): Promise<Prepared> {
       }
     }
   };
-  await Promise.all(Array.from({ length: 3 }, worker));
+  await Promise.all(Array.from({ length: 5 }, worker));
   const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
   out.ready.sort(byName);
   out.skipped.sort(byName);

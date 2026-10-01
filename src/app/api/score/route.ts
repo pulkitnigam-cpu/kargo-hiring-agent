@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { settleEmails } from "@/lib/email/send";
 import { queueState, startScoring } from "@/lib/scoring/queue";
 
@@ -10,6 +10,8 @@ export const maxDuration = 300;
 // undo window has passed, so statuses stay current without a background job.
 export async function GET() {
   await settleEmails().catch((e) => console.error("[email] settle", e));
+  // Delivery status (one Resend call per email) after responding.
+  after(() => settleEmails({ poll: true }).then(() => undefined).catch(() => undefined));
   return NextResponse.json(await queueState());
 }
 

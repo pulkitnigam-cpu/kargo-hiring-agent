@@ -86,29 +86,35 @@ export async function loadDraft(candidateId: string): Promise<DraftView> {
   };
 }
 
+// The email panel as it stands after an action on one of its emails.
+async function viewOf(emailId: string): Promise<DraftView | null> {
+  const e = await prisma.email.findUnique({ where: { id: emailId }, select: { candidateId: true } });
+  return e ? loadDraft(e.candidateId) : null;
+}
+
 export async function saveDraftEdit(emailId: string, subject: string, body: string) {
   const res = await saveEdit(emailId, subject.slice(0, 300), body.slice(0, 5000));
   revalidatePath("/", "layout");
-  return res;
+  return { ...res, view: await viewOf(emailId) };
 }
 
 export async function sendOne(emailId: string, consent = false) {
-  if (!consent) return { queued: 0, skipped: [{ name: "", reason: "Tick \"Yes, send\" first." }], sendAt: null };
+  if (!consent) return { queued: 0, skipped: [{ name: "", reason: "Tick \"Yes, send\" first." }], sendAt: null, view: null };
   const res = await queueEmails([emailId]);
   revalidatePath("/", "layout");
-  return { ...res, sendAt: res.sendAt?.toISOString() ?? null };
+  return { ...res, sendAt: res.sendAt?.toISOString() ?? null, view: await viewOf(emailId) };
 }
 
 export async function undo(emailId: string) {
   const res = await undoEmail(emailId);
   revalidatePath("/", "layout");
-  return res;
+  return { ...res, view: await viewOf(emailId) };
 }
 
 export async function resend(emailId: string) {
   const res = await sendAgain(emailId);
   revalidatePath("/", "layout");
-  return { ...res, sendAt: res.sendAt?.toISOString() ?? null };
+  return { ...res, sendAt: res.sendAt?.toISOString() ?? null, view: await viewOf(emailId) };
 }
 
 export async function prepare(group: BulkGroup) {
@@ -122,7 +128,7 @@ export async function prepare(group: BulkGroup) {
 export async function saveNote(emailId: string, note: string) {
   const res = await setNote(emailId, note);
   revalidatePath("/", "layout");
-  return res;
+  return { ...res, view: await viewOf(emailId) };
 }
 
 // Bulk send with Arjun's explicit consent. An optional message for the whole
@@ -134,11 +140,11 @@ export async function sendBulk(emailIds: string[], groupNote = "", consent = fal
   const skipped: { name: string; reason: string }[] = [];
   if (note) {
     const drafts = await prisma.email.findMany({ where: { id: { in: ids } }, include: { candidate: { select: { name: true } } } });
-    for (const d of drafts) {
+    await Promise.all(drafts.map(async (d) => {
       const combined = [d.customNote, note].filter((x) => x && x.trim()).join("\n\n");
       const r = await setNote(d.id, combined);
       if (r.problems.length) skipped.push({ name: d.candidate.name, reason: `With your message: ${r.problems[0]}` });
-    }
+    }));
   }
   const res = await queueEmails(ids);
   revalidatePath("/", "layout");

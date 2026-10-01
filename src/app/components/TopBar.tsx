@@ -4,8 +4,10 @@ import NavLinks from "./NavLinks";
 import UploadButtons from "./UploadButtons";
 
 export default async function TopBar() {
-  const rubric = await prisma.rubricVersion.findFirst({ where: { approvedAt: { not: null } }, orderBy: { version: "desc" } });
-  const queued = await prisma.email.count({ where: { status: { in: ["queued", "sending"] } } });
+  const [rubric, queued] = await Promise.all([
+    prisma.rubricVersion.findFirst({ where: { approvedAt: { not: null } }, orderBy: { version: "desc" }, select: { version: true } }),
+    prisma.email.count({ where: { status: { in: ["queued", "sending"] } } }),
+  ]);
   return (
     <header className="topbar">
       <div className="wrap">

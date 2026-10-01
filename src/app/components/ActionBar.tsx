@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { CANDIDATE_STATUS } from "@/lib/constants";
 import type { InsightFlags } from "@/lib/dashboard";
-import { candidatesForGroup, mailConfigProblem, undoMinutes, type BulkGroup } from "@/lib/email/send";
+import { GROUP_STATUS, mailConfigProblem, undoMinutes, type BulkGroup } from "@/lib/email/send";
 import BulkSend from "./BulkSend";
 import ScoringStatus from "./ScoringStatus";
 import UploadButtons from "./UploadButtons";
@@ -49,12 +49,24 @@ export default async function ActionBar({ approved, total }: { approved: boolean
   const problem = mailConfigProblem();
   if (problem) items.push(<div className="action-item action-warn" key="mail"><span>✉ {problem}</span></div>);
 
+  // Everything the bar needs, fetched together in one round.
+  const now = new Date();
+  const [open, drafts, unreadable, bounced, waiting] = await Promise.all([
+    prisma.candidate.findMany({
+      where: { status: { in: Object.values(GROUP_STATUS) } },
+      select: { id: true, status: true, reviewedAt: true, holdDeadline: true, insight: { select: { flagsJson: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.email.findMany({ where: { status: "draft", NOT: { checksJson: "[]" } }, select: { candidateId: true, checksJson: true } }),
+    prisma.candidate.findMany({ where: { status: S.NEEDS_MANUAL_LOOK }, select: { id: true }, orderBy: { createdAt: "asc" } }),
+    prisma.email.count({ where: { status: { in: ["bounced", "failed"] } } }),
+    prisma.candidate.count({ where: { OR: [{ status: S.PARSED }, { rescoreRequested: true }] } }),
+  ]);
+  const inGroup = (group: BulkGroup) =>
+    open.filter((c) => c.status === GROUP_STATUS[group] && (group !== "hold_due" || (!!c.holdDeadline && c.holdDeadline <= now)));
+
   // ⚠ candidates are kept out of bulk emails until they're opened.
-  const unsent = await prisma.candidate.findMany({
-    where: { status: { in: [S.SELECTED, S.HOLD, S.REJECTED] } },
-    select: { id: true, status: true, reviewedAt: true, insight: { select: { flagsJson: true } } },
-    orderBy: { createdAt: "asc" },
-  });
+  const unsent = open.filter((c) => c.status !== S.HOLD_NOTIFIED);
   const flagged = unsent.filter(flaggedUnopened);
   if (flagged.length) {
     const first = flagged[0];
@@ -69,13 +81,13 @@ export default async function ActionBar({ approved, total }: { approved: boolean
 
   // Drafts whose checks failed can't go until Arjun fixes them.
   const blockedDrafts = new Set(
-    (await prisma.email.findMany({ where: { status: "draft", NOT: { checksJson: "[]" } }, select: { candidateId: true, checksJson: true } }))
+    drafts
       .filter((e) => e.checksJson && JSON.parse(e.checksJson).length)
       .map((e) => e.candidateId),
   );
 
   for (const group of ["invite", "hold", "regret", "hold_due"] as BulkGroup[]) {
-    const cands = await candidatesForGroup(group);
+    const cands = inGroup(group);
     if (!cands.length) continue;
     const toCheck = cands.filter((c) => flaggedUnopened(c));
     const toFix = cands.filter((c) => !flaggedUnopened(c) && blockedDrafts.has(c.id));
@@ -107,18 +119,16 @@ export default async function ActionBar({ approved, total }: { approved: boolean
     );
   }
 
-  const unreadable = await prisma.candidate.findFirst({ where: { status: S.NEEDS_MANUAL_LOOK }, select: { id: true } });
-  const unreadableCount = unreadable ? await prisma.candidate.count({ where: { status: S.NEEDS_MANUAL_LOOK } }) : 0;
-  if (unreadable) {
+  const unreadableCount = unreadable.length;
+  if (unreadableCount) {
     items.push(
       <div className="action-item" key="unreadable">
         <span><strong>{unreadableCount}</strong> CV{unreadableCount === 1 ? "" : "s"} couldn&apos;t be read: open the file and decide yourself</span>
-        <Link className="btn btn-small" href={`/?tab=todo&c=${unreadable.id}`} scroll={false}>Open</Link>
+        <Link className="btn btn-small" href={`/?tab=todo&c=${unreadable[0].id}`} scroll={false}>Open</Link>
       </div>,
     );
   }
 
-  const bounced = await prisma.email.count({ where: { status: { in: ["bounced", "failed"] } } });
   if (bounced) {
     items.push(
       <div className="action-item action-warn" key="bounced">
@@ -127,8 +137,6 @@ export default async function ActionBar({ approved, total }: { approved: boolean
       </div>,
     );
   }
-
-  const waiting = await prisma.candidate.count({ where: { OR: [{ status: S.PARSED }, { rescoreRequested: true }] } });
 
   return (
     <section className="actions-bar" aria-label="To do">

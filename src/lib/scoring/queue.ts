@@ -2,6 +2,7 @@ import { ApiError, type GoogleGenAI } from "@google/genai";
 import { prisma } from "../db";
 import { CANDIDATE_STATUS } from "../constants";
 import { DEFAULT_MODEL, makeClient, MissingKeyError } from "./ai";
+import { ensureDraft } from "../email/drafts";
 import { approvedRubric, loadJds, scoreCandidate } from "./score";
 
 // Scoring in steps. On Vercel a request can run at most 5 minutes, so a step
@@ -111,6 +112,8 @@ export async function startScoring(): Promise<StartResult> {
       try {
         await scoreCandidate(client, id, rubric, jds);
         await prisma.candidate.update({ where: { id }, data: { scoringClaimedAt: null, rescoreRequested: false } });
+        // Write the email draft now, so opening the Email tab doesn't wait on the AI.
+        await ensureDraft(id).catch(() => undefined);
       } catch (err) {
         // Release the claim so a later step can retry this CV.
         await prisma.candidate.update({ where: { id }, data: { scoringClaimedAt: null } }).catch(() => undefined);

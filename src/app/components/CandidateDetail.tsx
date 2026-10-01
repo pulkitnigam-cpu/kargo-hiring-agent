@@ -29,7 +29,7 @@ export default async function CandidateDetail({ id, closeHref, view }: { id: str
     include: {
       profile: true,
       insight: true,
-      cvFiles: { orderBy: { createdAt: "desc" }, take: 1 },
+      cvFiles: { orderBy: { createdAt: "desc" }, take: 1, select: { filename: true } },
       scores: { orderBy: { createdAt: "desc" }, take: 2, include: { criteria: true, rubricVersion: true } },
       statusEvents: { orderBy: { createdAt: "desc" } },
       emails: { where: { status: { not: "draft" } }, orderBy: { createdAt: "desc" }, take: 1 },
@@ -39,13 +39,21 @@ export default async function CandidateDetail({ id, closeHref, view }: { id: str
 
   const meta: InsightFlags | null = c.insight ? JSON.parse(c.insight.flagsJson) : null;
   const wasFlagged = !!meta?.needsReview && !c.reviewedAt;
-  await markReviewed(c.id);
+  // Independent lookups, together: mark opened, sent-before check, and where "next" goes.
+  const [, emailed, unsentOthers] = await Promise.all([
+    c.reviewedAt ? null : markReviewed(c.id),
+    emailAlreadySent(c.id),
+    prisma.candidate.findMany({
+      where: { id: { not: c.id }, status: { in: [S.SELECTED, S.HOLD, S.REJECTED] } },
+      select: { id: true, reviewedAt: true, insight: { select: { flagsJson: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
 
   const role = (c.roleAssigned ?? c.roleTag) as Role | null;
   const score = c.scores.find((s) => s.roleScored === c.roleAssigned);
   const other = c.scores.find((s) => s.roleScored !== c.roleAssigned);
   const band = bandOfStatus(c.status);
-  const emailed = await emailAlreadySent(c.id);
   const last = c.emails[0];
   const stage = stageOf({
     status: c.status,
@@ -79,11 +87,6 @@ export default async function CandidateDetail({ id, closeHref, view }: { id: str
   const href = (to: PanelView) => `${closeHref}&c=${c.id}&view=${to}`;
 
   // Where "next" goes after a check or a send.
-  const unsentOthers = await prisma.candidate.findMany({
-    where: { id: { not: c.id }, status: { in: [S.SELECTED, S.HOLD, S.REJECTED] } },
-    select: { id: true, reviewedAt: true, insight: { select: { flagsJson: true } } },
-    orderBy: { createdAt: "asc" },
-  });
   const isFlagged = (x: (typeof unsentOthers)[number]) => !x.reviewedAt && !!x.insight && (JSON.parse(x.insight.flagsJson) as InsightFlags).needsReview;
   const nextFlagged = unsentOthers.find(isFlagged);
   const nextToSend = unsentOthers.find((x) => !isFlagged(x));

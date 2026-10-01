@@ -48,7 +48,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   // Emails past their undo window have gone out; bring statuses up to date.
   await settleEmails().catch((e) => console.error("[email] settle", e));
   const now = new Date();
-  const everyone: Item[] = (await loadRows(ALL)).map((r) => ({ ...r, stage: stageOf(r, now) }));
+  const [loaded, approvedRow] = await Promise.all([
+    loadRows(ALL),
+    prisma.rubricVersion.findFirst({ where: { approvedAt: { not: null } }, select: { id: true } }),
+  ]);
+  const everyone: Item[] = loaded.map((r) => ({ ...r, stage: stageOf(r, now) }));
   const needle = (q ?? "").trim().toLowerCase();
 
   // Pending: still waiting on you. Done: you've acted (emailed or queued).
@@ -76,7 +80,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     all: everyone.filter((r) => matches(r, { group, act: "all" })).length,
   };
 
-  const approved = !!(await prisma.rubricVersion.findFirst({ where: { approvedAt: { not: null } } }));
+  const approved = !!approvedRow;
   const total = everyone.length;
   const heardBack = everyone.filter((r) => r.stage.sentLabel).length;
   const contactable = everyone.filter((r) => r.status !== S.NEEDS_MANUAL_LOOK).length;

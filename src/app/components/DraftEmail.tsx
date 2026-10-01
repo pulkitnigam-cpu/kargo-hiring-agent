@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { loadDraft, resend, saveDraftEdit, saveNote, sendOne, undo, type DraftView } from "../email-actions";
 import Countdown from "./Countdown";
@@ -20,7 +19,6 @@ const when = (iso: string | null) =>
 
 // The Email view: what was sent (one line each), then the email due next.
 export default function DraftEmail({ candidateId, name, nextHref }: { candidateId: string; name: string; nextHref?: string | null }) {
-  const router = useRouter();
   const [v, setV] = useState<DraftView | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -33,15 +31,15 @@ export default function DraftEmail({ candidateId, name, nextHref }: { candidateI
   const [justSent, setJustSent] = useState(false);
   const [pending, start] = useTransition();
 
-  const refresh = useCallback(async () => {
-    const d = await loadDraft(candidateId);
+  const show = useCallback((d: DraftView) => {
     setV(d);
     setSubject(d.email?.subject ?? "");
     setBody(d.email?.body ?? "");
     setNoteText(d.email?.customNote ?? "");
     setNoteOpen(!!d.email?.customNote);
     setConsent(false);
-  }, [candidateId]);
+  }, []);
+  const refresh = useCallback(async () => show(await loadDraft(candidateId)), [candidateId, show]);
 
   useEffect(() => {
     void refresh();
@@ -54,32 +52,41 @@ export default function DraftEmail({ candidateId, name, nextHref }: { candidateI
   const blocked = !!e && e.checks.length > 0;
   const editDirty = !!e && (subject !== e.subject || body !== e.body);
   const noteDirty = !!e && note.trim() !== (e.customNote ?? "");
-  const act = (fn: () => Promise<void>) => start(async () => { setMsg(null); await fn(); await refresh(); router.refresh(); });
+  const act = (fn: () => Promise<DraftView | null | undefined>) => start(async () => {
+    setMsg(null);
+    const d = await fn();
+    if (d) show(d);
+    else await refresh();
+  });
 
   const save = () => act(async () => {
     if (!e) return;
     const r = await saveDraftEdit(e.id, subject, body);
     if (r.ok) setEditing(false);
     if (!r.ok || r.problems.length) setMsg({ ok: false, text: r.error ?? r.problems[0] });
+    return r.view;
   });
   const applyNote = () => act(async () => {
     if (!e) return;
     const r = await saveNote(e.id, note);
     if (!r.ok || r.problems.length) setMsg({ ok: false, text: r.error ?? r.problems[0] });
+    return r.view;
   });
   const approveAsIs = () => act(async () => {
     if (!e) return;
     const r = await saveDraftEdit(e.id, e.subject, e.body);
     if (r.problems.length) setMsg({ ok: false, text: r.problems[0] });
+    return r.view;
   });
   const send = () => act(async () => {
     if (!e || !consent) return;
     const r = await sendOne(e.id, true);
     if (r.queued) setJustSent(true);
     else setMsg({ ok: false, text: r.skipped[0]?.reason ?? "Not sent." });
+    return r.view;
   });
-  const doUndo = () => act(async () => { if (e) { const r = await undo(e.id); setJustSent(false); if (!r.ok) setMsg({ ok: false, text: r.error ?? "Couldn't undo." }); } });
-  const again = (id: string) => act(async () => { const r = await resend(id); if (!r.queued) setMsg({ ok: false, text: r.skipped[0]?.reason ?? "Not queued." }); });
+  const doUndo = () => act(async () => { if (e) { const r = await undo(e.id); setJustSent(false); if (!r.ok) setMsg({ ok: false, text: r.error ?? "Couldn't undo." }); return r.view; } });
+  const again = (id: string) => act(async () => { const r = await resend(id); if (!r.queued) setMsg({ ok: false, text: r.skipped[0]?.reason ?? "Not queued." }); return r.view; });
 
   return (
     <div className="mail">

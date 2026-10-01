@@ -38,7 +38,7 @@ export async function loadRows(statuses: string[], role?: Role): Promise<Row[]> 
     include: {
       cvFiles: { select: { filename: true }, orderBy: { createdAt: "desc" }, take: 1 },
       scores: { orderBy: { createdAt: "desc" }, take: 2, select: { roleScored: true, total: true, otherRoleTotal: true } },
-      insight: true,
+      insight: { select: { flagsJson: true, strongPointsJson: true } },
       emails: {
         where: { status: { in: ["queued", "sending", "sent", "delivered", "bounced", "failed"] } },
         select: { type: true, status: true, sentAt: true, sendAfter: true },
