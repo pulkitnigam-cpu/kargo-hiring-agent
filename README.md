@@ -3,6 +3,8 @@
 CV screening and candidate follow-through for Kargo's PM and SPM roles.
 `SPEC.md` is the source of truth; this README tracks what's built.
 
+**Live:** https://kargo-hiring-agent-6abl-pulkit-bc74.vercel.app (Next.js on Vercel, Neon Postgres, Gemini for scoring, Resend for email)
+
 ## Run it
 
 ```bash
