@@ -158,18 +158,6 @@ test("reason line: largest weighted gap, or the experience line when the range r
   assert.equal(reasonLineFor(out), experienceReason("PM"));
 });
 
-test("session tokens verify, expire and reject tampering", async () => {
-  process.env.DASHBOARD_PASSWORD = "test-password";
-  const { makeToken, verifyToken, passwordMatches } = await import("../session");
-  const t = (await makeToken())!;
-  assert.equal(await verifyToken(t), true);
-  assert.equal(await verifyToken(t.replace(/.$/, (c) => (c === "0" ? "1" : "0"))), false);
-  assert.equal(await verifyToken(t, Date.now() + 30 * 86_400_000), false);
-  assert.equal(await passwordMatches("test-password"), true);
-  assert.equal(await passwordMatches("nope"), false);
-  delete process.env.DASHBOARD_PASSWORD;
-});
-
 test("personal note: own paragraph above the sign-off, replaced not stacked, removable", async () => {
   const { applyNote } = await import("./templates");
   const body = assembleBody(base, personal);

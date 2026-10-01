@@ -151,25 +151,22 @@ Daily, candidates whose regret went out more than `RETENTION_DAYS` (180) ago
 are deleted with their CV files; their audit entries keep no personal data.
 Candidates still waiting to hear back are never deleted.
 
-## Hosting (Render)
+## Hosting (Vercel + Neon)
 
-1. Push this folder to a GitHub repo (`.env`, the database and CVs are
-   git-ignored and never leave your machine).
-2. In Render: **New → Blueprint** → pick the repo. `render.yaml` creates a
-   Docker web service with a 1 GB disk at `/data` (database + CVs).
-3. Enter the secrets it asks for: `DASHBOARD_PASSWORD`, `GEMINI_API_KEY`,
-   `RESEND_API_KEY`, `TEST_RECIPIENT`, optionally `CAL_LINK` and
-   `REPLY_TO_EMAIL`.
-4. Open the URL, sign in, approve the rubric, upload the CVs.
+1. Import this GitHub repo in Vercel and add the variables from `.env.example`.
+2. In the Vercel project: **Storage → Neon**. It adds `DATABASE_URL` and
+   `DATABASE_URL_UNPOOLED` for you.
+3. Once: `npx prisma db push` and `node prisma/seed.cjs` against Neon (or
+   `node scripts/migrate-sqlite-to-neon.cjs` to bring local data over).
+4. A daily cron (`vercel.json`) settles emails and applies the retention rule.
 
 Real (non-test) sending: verify Kargo's domain in Resend, set `FROM_EMAIL` to
 Arjun's address on it, and `TEST_MODE=false`.
 
-## Login
+## Access
 
-Set `DASHBOARD_PASSWORD` to require a password on every page and API route
-(one shared login, 14-day session). Locally it's optional; in production the
-app refuses to serve without one.
+There is no login: anyone with the link can open the dashboard. Keep the URL
+private. `/api/cron` checks `CRON_SECRET`.
 
 ## Decisions taken where the spec was open
 

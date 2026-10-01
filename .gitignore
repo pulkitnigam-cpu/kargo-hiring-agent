@@ -50,3 +50,5 @@ next-env.d.ts
 .backtest*.log
 .next-dev*.log
 /prisma/schema.sqlite.bak
+/prisma/schema.local.prisma
+/.claude/
