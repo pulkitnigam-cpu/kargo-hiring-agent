@@ -1,0 +1,41 @@
+{
+  "name": "kargo-hiring-agent",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:push": "prisma db push",
+    "db:seed": "node prisma/seed.cjs",
+    "setup": "prisma db push && node prisma/seed.cjs",
+    "test": "node --experimental-strip-types --no-warnings --import ./scripts/ts-resolve.mjs --test \"src/**/*.test.ts\"",
+    "fixtures": "node scripts/make-test-zip.cjs",
+    "backtest": "node --experimental-strip-types --no-warnings --import ./scripts/ts-resolve.mjs scripts/backtest.ts",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@google/genai": "^2.24.0",
+    "@prisma/client": "^6.19.3",
+    "jszip": "^3.10.2",
+    "mammoth": "^1.13.0",
+    "next": "15.5.26",
+    "pdf-parse": "^1.1.1",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "resend": "^6.30.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^20",
+    "@types/pdf-parse": "^1.1.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.26",
+    "prisma": "^6.19.3",
+    "typescript": "^5"
+  }
+}

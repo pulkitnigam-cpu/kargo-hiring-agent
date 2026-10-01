@@ -1,0 +1,199 @@
+// Data model: SPEC.md §13.2, on Neon Postgres. Status-like fields are strings;
+// the allowed values are listed in src/lib/constants.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // Neon pooled connection (the app)
+  directUrl = env("DATABASE_URL_UNPOOLED") // Neon direct connection (schema changes)
+}
+
+model Candidate {
+  id              String    @id @default(cuid())
+  name            String
+  email           String?
+  phone           String?
+  location        String?
+  appliedDate     DateTime
+  roleTag         String? // PM | SPM | null (untagged)
+  roleTagSource   String? // manifest | filename | cv | batch
+  roleAssigned    String? // set in Phase 2 (§9)
+  roleSource      String? // tagged | rubric | arjun
+  status          String // see CANDIDATE_STATUS
+  manualReason    String? // why it is in "Needs manual look"
+  isAugustContact Boolean   @default(false)
+  movedByArjun    Boolean   @default(false) // his decision differs from the rubric band
+  reviewedAt      DateTime? // first opened by Arjun (⚠ rows need this before bulk send)
+  holdDeadline    DateTime? // hold note sent + 7 days (§10.2)
+  scoringClaimedAt DateTime? // a scoring step is working on this CV (serverless: steps claim work)
+  rescoreRequested Boolean  @default(false) // "Re-score all" picked this candidate
+  uploadBatchId   String?
+  createdAt       DateTime  @default(now())
+
+  cvFiles      CvFile[]
+  profile      Profile?
+  scores       Score[]
+  insight      Insight?
+  statusEvents StatusEvent[]
+  emails       Email[]
+
+  @@index([email])
+  @@index([status])
+}
+
+model CvFile {
+  id          String    @id @default(cuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  filename    String
+  fileHash    String    @unique
+  mime        String
+  storagePath String? // legacy: file on local disk
+  data        Bytes? // the original file, kept in the database (private; no public URLs)
+  rawText     String?
+  parseStatus String // ok | failed
+  createdAt   DateTime  @default(now())
+}
+
+model Profile {
+  candidateId       String    @id
+  candidate         Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  blindedText       String
+  yearsPmExperience Float?
+  structuredJson    String?
+}
+
+model RubricVersion {
+  id             String    @id @default(cuid())
+  version        Int       @unique
+  name           String
+  criteriaJson   String
+  weightsPmJson  String
+  weightsSpmJson String
+  rulesJson      String? // general scoring rules (v2+), e.g. the tie-break
+  changeNote     String? // what changed from the previous version
+  approvedBy     String?
+  approvedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  scores         Score[]
+}
+
+model JobDescription {
+  role  String @id // PM | SPM
+  title String
+  text  String
+}
+
+model Score {
+  id              String            @id @default(cuid())
+  candidateId     String
+  candidate       Candidate         @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  rubricVersionId String
+  rubricVersion   RubricVersion     @relation(fields: [rubricVersionId], references: [id])
+  roleScored      String
+  total           Int
+  band            String
+  otherRoleTotal  Int?
+  confidence      String?
+  createdAt       DateTime          @default(now())
+  criteria        CriterionScore[]
+}
+
+model CriterionScore {
+  id            String  @id @default(cuid())
+  scoreId       String
+  score         Score   @relation(fields: [scoreId], references: [id], onDelete: Cascade)
+  criterionId   String
+  score0to4     Int
+  weight        Int
+  points        Float
+  evidenceQuote String?
+  rationale     String?
+  verified      Boolean @default(true)
+}
+
+model Insight {
+  candidateId      String    @id
+  candidate        Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  strongPointsJson String
+  weakPointsJson   String
+  probesJson       String
+  flagsJson        String
+}
+
+model StatusEvent {
+  id          String    @id @default(cuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  fromStatus  String?
+  toStatus    String
+  actor       String // system | arjun
+  reason      String?
+  createdAt   DateTime  @default(now())
+}
+
+model Email {
+  id            String    @id @default(cuid())
+  candidateId   String
+  candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  type          String // invite | hold | regret_close | regret_clear
+  role          String // role the email is written for
+  subject       String
+  body          String
+  status        String // draft | queued | sending | sent | delivered | bounced | failed | cancelled
+  editedByArjun Boolean   @default(false)
+  checksJson    String? // post-check problems (§13.4); a non-empty list blocks sending
+  factsKey      String? // inputs the draft was built from; a change means a redraft
+  customNote    String? // Arjun's own message, added as its own paragraph
+  toAddress     String? // where it actually went (TEST_RECIPIENT in test mode)
+  queuedAt      DateTime?
+  sendAfter     DateTime? // end of the 10-minute undo window
+  sentAt        DateTime?
+  lastEvent     String? // latest Resend event: delivered, bounced, ...
+  error         String?
+  resendId      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status])
+  @@index([candidateId, type])
+}
+
+model UploadBatch {
+  id          String   @id @default(cuid())
+  mode        String // single | bulk
+  roleTag     String?
+  summaryJson String
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actor       String
+  action      String
+  entity      String
+  payloadJson String?
+  createdAt   DateTime @default(now())
+}
+
+// Step 0 calibration (§5): the current rubric scored against the past hires.
+model CalibrationRun {
+  id            String    @id @default(cuid())
+  rubricVersion Int
+  status        String // running | done | failed
+  resultsJson   String? // per hire: rating, totals, criterion scores; per criterion: gap
+  error         String?
+  createdAt     DateTime  @default(now())
+  finishedAt    DateTime?
+}
+
+// §15.3 agreement test: Arjun's blind calls on sample CVs vs the rubric.
+model AgreementRun {
+  id          String    @id @default(cuid())
+  itemsJson   String // [{ candidateId, arjun: band | null, rubric: band, score }]
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+}

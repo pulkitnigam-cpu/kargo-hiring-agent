@@ -1,0 +1,140 @@
+{
+  "version": 2,
+  "name": "Rubric B (Balanced), tightened anchors",
+  "changeNote": "Same criteria and weights as v1. Every level 0–4 is now defined with observable tests, edge cases are ruled on, and a tie-break rule is added, so the same CV scores the same way every time.",
+  "scoringRules": [
+    "Score only what the CV text states. Job titles alone prove nothing: a level needs the described activity.",
+    "A level applies only when every condition in it is met. If any condition is missing, go down a level.",
+    "If the evidence sits between two levels, or you are unsure, choose the lower level.",
+    "Score each criterion on its own. Strength in one criterion never raises another.",
+    "Count activity from any job on the CV, including earlier non-product roles, unless the criterion says otherwise.",
+    "Internships and traineeships under 6 months count as exposure only (at most level 2 where the criterion allows)."
+  ],
+  "criteria": [
+    {
+      "id": "P1",
+      "kind": "pattern",
+      "name": "Lived the operation",
+      "anchors": {
+        "4": "At least 1 year in a hands-on operational role at a logistics operator (freight forwarder, 3PL, customs broker/CHA, port or terminal, carrier, shipping line), doing operational work such as shipment execution, documentation, carrier coordination or exception handling; AND afterwards worked at a software company or in a product, engineering or tech role.",
+        "3": "Either: at least 1 year of hands-on logistics operations as in level 4 but never moved to a software company or tech role. Or: at least 1 year in a commercial or client-facing role at a logistics operator (sales, account management) with direct operational involvement, followed by a move to a software company.",
+        "2": "Under 1 year of hands-on logistics operations (internship, traineeship, rotation); or at least 1 year of operations in an adjacent operations-heavy field (e-commerce fulfilment, warehousing inside a non-logistics company, manufacturing, field operations, supply-chain planning).",
+        "1": "Logistics only from the software or vendor side: built integrations with, sold software to, or supported logistics companies, without working in their operations.",
+        "0": "No operations exposure."
+      },
+      "notes": "Consulting for logistics firms counts as operations only if the CV describes doing the operational work, not advising on it."
+    },
+    {
+      "id": "P2",
+      "kind": "pattern",
+      "name": "Owns the bad moment",
+      "anchors": {
+        "4": "Names a specific failure, loss or crisis (a named incident, not a category); says what they personally did; AND says how they closed it with the people affected (told customers, wrote or shared the post-mortem, ran the follow-up to closure).",
+        "3": "Names a specific failure or crisis with real stakes for customers or operations, and what they personally did to resolve it, but nothing about closing the loop with the people affected.",
+        "2": "Describes fixing a specific technical or process problem (a bug, an outage cause, a broken workflow) without customer or business stakes, or without it being their failure to own.",
+        "1": "Only generic mentions of problems (\"handled escalations\", \"resolved issues\") with no specific incident.",
+        "0": "Only wins."
+      },
+      "notes": "Killing a feature is not a failure for this criterion (it is scored under J1)."
+    },
+    {
+      "id": "P3",
+      "kind": "pattern",
+      "name": "No one in between",
+      "anchors": {
+        "4": "The CV says they were the primary or direct contact for users, customers or operators as an ongoing part of a role (\"primary contact\", \"owned the relationship\", \"worked directly with\", sole PM running discovery with customers).",
+        "3": "Regular hands-on contact with end users or customers themselves (ran their own customer sessions, worked on site with customers, handled customer accounts), but not stated as the primary contact.",
+        "2": "Contact only through occasional structured research or interviews, or through other teams relaying customer input.",
+        "1": "Indirect only: support tickets, analytics, surveys, reports from others.",
+        "0": "Never faced users or customers."
+      },
+      "notes": "Internal stakeholders (their own engineering, sales or leadership teams) are not users. Carriers, agents and customs brokers count as operators when the candidate coordinated with them directly."
+    },
+    {
+      "id": "P4",
+      "kind": "pattern",
+      "name": "Customer-pain metrics",
+      "anchors": {
+        "4": "Most of the metrics they report are the customer's: tickets, churn, delays, errors, time-to-value, inspection or compliance results.",
+        "3": "About half their metrics are the customer's.",
+        "2": "At least one customer metric, but most are their own output.",
+        "1": "Only their own output metrics, but at least one metric.",
+        "0": "No metrics at all."
+      }
+    },
+    {
+      "id": "P5",
+      "kind": "pattern",
+      "name": "Absorbs load",
+      "anchors": {
+        "4": "States they took on a larger load or a surge (more accounts, volume, scope) without extra headcount.",
+        "3": "Covered for a departed colleague or ran two roles at once, stated explicitly.",
+        "2": "Built a territory, function or area alone from scratch.",
+        "1": "Handled a large load, without saying it grew or that headcount stayed flat.",
+        "0": "None mentioned."
+      }
+    },
+    {
+      "id": "J1",
+      "kind": "jd",
+      "name": "Shipped, killed, measured",
+      "anchors": {
+        "4": "Shipped software features or products; AND explicitly killed, stopped or reversed at least one because of data (usage, adoption, results); AND reports measured outcomes of what they shipped.",
+        "3": "Shipped software features with measured outcomes, and stopped or pivoted something, but without saying data drove it.",
+        "2": "Shipped software features with at least one measured outcome; nothing killed.",
+        "1": "Built something that is not a software product feature (a spreadsheet or BI dashboard, an internal process, a report), or shipped software with no measured outcome.",
+        "0": "Nothing built or shipped."
+      },
+      "notes": "Software features count whoever built them (PM, engineer, founder). Sales, customer success and operations roles score 1 at most unless the CV describes shipping software."
+    },
+    {
+      "id": "J2",
+      "kind": "jd",
+      "name": "Integration and platform depth",
+      "anchors": {
+        "4": "Owned integrations, APIs, data pipelines, data quality or build-vs-configure decisions end to end: they made the decisions and delivered.",
+        "3": "Led the delivery of integration or data work where the key decisions sat with someone else, or owned one integration end to end.",
+        "2": "Worked on integration, API or data work as a contributor on a team.",
+        "1": "Used or configured integrated systems as a user or operator (TMS, ERP, EDI, customs portals), including onboarding clients onto a system.",
+        "0": "None."
+      }
+    },
+    {
+      "id": "J3",
+      "kind": "jd",
+      "name": "Makes calls without a layer above",
+      "anchors": {
+        "4": "Was the sole owner of a product, area or function with no one above making those calls (sole PM, founder, first hire in the function), AND the CV names decisions they made.",
+        "3": "Owned an area and describes making its key calls, with a manager above who was not making them day to day.",
+        "2": "Owned a workstream or area inside a larger team where senior people set direction.",
+        "1": "Executed with some latitude but describes no decisions of their own.",
+        "0": "Executes others' decisions only."
+      },
+      "notes": "Owning a sales territory, a book of accounts or a consulting engagement is at most 2: the product and company calls sit elsewhere."
+    },
+    {
+      "id": "J4",
+      "kind": "jd",
+      "name": "Builds how the team works",
+      "anchors": {
+        "4": "Created a team practice (a template, process, review, ritual) that the CV says others adopted.",
+        "3": "Created a team practice, adoption not stated.",
+        "2": "Improved an existing practice.",
+        "1": "Followed or ran existing practices.",
+        "0": "None."
+      }
+    }
+  ],
+  "weights": {
+    "PM": { "P1": 25, "P2": 15, "P3": 15, "J1": 25, "J2": 5, "J3": 15 },
+    "SPM": { "P1": 15, "P2": 15, "P3": 10, "J1": 15, "J2": 25, "J3": 20 }
+  },
+  "weightRationale": {
+    "P1": "Strongest pattern. PM works daily inside freight operations.",
+    "P2": "Equally important for both",
+    "P3": "The PM runs customer discovery directly",
+    "J1": "The PM JD asks for \"shipped things, killed things\"",
+    "J2": "The SPM owns the integration and data layer",
+    "J3": "The SPM is the most senior PM, with \"no committee\""
+  }
+}

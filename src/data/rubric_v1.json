@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "name": "Rubric B (Balanced)",
+  "criteria": [
+    {
+      "id": "P1",
+      "kind": "pattern",
+      "name": "Lived the operation",
+      "anchors": {
+        "4": "Hands-on work in freight, 3PL, customs, port or carrier operations, then moved into a software, product or tech role",
+        "2": "Adjacent operations-heavy field (e-commerce fulfilment, manufacturing, field ops, supply chain planning), or logistics exposure only through integrations",
+        "0": "No operations exposure"
+      }
+    },
+    {
+      "id": "P2",
+      "kind": "pattern",
+      "name": "Owns the bad moment",
+      "anchors": {
+        "4": "Names a specific failure, loss or crisis, what they did, and how they closed it with the affected people (customer, team)",
+        "2": "Fixed a technical failure, but nothing about the affected people",
+        "0": "Only wins"
+      }
+    },
+    {
+      "id": "P3",
+      "kind": "pattern",
+      "name": "No one in between",
+      "anchors": {
+        "4": "Was the primary contact for users, operators or customers, with no layer in between",
+        "2": "Contact through research, interviews or other teams",
+        "0": "Never faced users"
+      }
+    },
+    {
+      "id": "P4",
+      "kind": "pattern",
+      "name": "Customer-pain metrics",
+      "anchors": {
+        "4": "Most metrics are the customer's (tickets, churn, delays, time-to-value, inspection results)",
+        "2": "A mix of customer and own-output metrics",
+        "0": "Only their own output (pipeline, uptime, velocity)"
+      }
+    },
+    {
+      "id": "P5",
+      "kind": "pattern",
+      "name": "Absorbs load",
+      "anchors": {
+        "4": "Took on a bigger load or a surge without extra headcount",
+        "2": "Built a territory or area alone from scratch",
+        "0": "None mentioned"
+      }
+    },
+    {
+      "id": "J1",
+      "kind": "jd",
+      "name": "Shipped, killed, measured",
+      "anchors": {
+        "4": "Shipped features, killed at least 1 based on data, and measured the outcome",
+        "2": "Shipped and measured, nothing killed",
+        "0": "No product shipped"
+      }
+    },
+    {
+      "id": "J2",
+      "kind": "jd",
+      "name": "Integration and platform depth",
+      "anchors": {
+        "4": "Owned integrations, data quality, or build-vs-configure calls end to end",
+        "2": "Worked on integrations as a contributor",
+        "0": "None"
+      }
+    },
+    {
+      "id": "J3",
+      "kind": "jd",
+      "name": "Makes calls without a layer above",
+      "anchors": {
+        "4": "The only owner of an area, with no one above making the calls",
+        "2": "Owns an area inside a larger team",
+        "0": "Executes others' decisions"
+      }
+    },
+    {
+      "id": "J4",
+      "kind": "jd",
+      "name": "Builds how the team works",
+      "anchors": {
+        "4": "Created team practices that others adopted",
+        "2": "Improved existing practices",
+        "0": "None"
+      }
+    }
+  ],
+  "weights": {
+    "PM": { "P1": 25, "P2": 15, "P3": 15, "J1": 25, "J2": 5, "J3": 15 },
+    "SPM": { "P1": 15, "P2": 15, "P3": 10, "J1": 15, "J2": 25, "J3": 20 }
+  },
+  "weightRationale": {
+    "P1": "Strongest pattern. PM works daily inside freight operations.",
+    "P2": "Equally important for both",
+    "P3": "The PM runs customer discovery directly",
+    "J1": "The PM JD asks for \"shipped things, killed things\"",
+    "J2": "The SPM owns the integration and data layer",
+    "J3": "The SPM is the most senior PM, with \"no committee\""
+  }
+}
